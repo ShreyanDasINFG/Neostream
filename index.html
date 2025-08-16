@@ -1,0 +1,588 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NeonStream — Enhanced</title>
+<style>
+  :root{
+    --bg:#071017;
+    --panel:#0f1720;
+    --muted:#98a6b2;
+    --text:#e6f3f6;
+    --accent:#00e5ff;
+    --accent-2:#6cff6c;
+    --glass: rgba(255,255,255,0.03);
+    --radius:12px;
+    --shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#071017,#02050a);color:var(--text)}
+  a{color:inherit}
+  /* Layout */
+  .app{display:flex;height:100vh;gap:14px;padding:14px}
+  .sidebar{
+    width:220px;background:var(--panel);border-radius:var(--radius);padding:16px;
+    display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)
+  }
+  .brand{font-weight:700;color:var(--accent);font-size:1.05rem}
+  .nav a{display:block;padding:8px;border-radius:8px;color:var(--muted);text-decoration:none}
+  .nav a:hover{background:rgba(0,229,255,0.06);color:var(--text)}
+  .library{flex:1;overflow:auto;padding-right:6px}
+  .main{flex:1;display:flex;flex-direction:column;gap:12px}
+  .topbar{display:flex;align-items:center;gap:12px}
+  .search{flex:1;display:flex;gap:8px;align-items:center;background:var(--glass);padding:8px;border-radius:999px;border:1px solid rgba(0,229,255,0.06)}
+  .search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:14px}
+  .content{display:flex;gap:12px;flex:1;overflow:hidden}
+  .list{flex:1;background:var(--panel);border-radius:var(--radius);padding:12px;overflow:auto;box-shadow:var(--shadow)}
+  .sidebar-right{width:320px;display:flex;flex-direction:column;gap:12px}
+  /* Track cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);padding:10px;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:transform .14s,box-shadow .14s}
+  .card:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.6)}
+  .cover{width:100%;height:0;padding-bottom:100%;border-radius:8px;background:#081018;background-size:cover;background-position:center}
+  .title{font-weight:600; font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .artist{font-size:12px;color:var(--muted)}
+  .duration{font-size:12px;color:var(--muted);margin-left:auto}
+  /* Player */
+  .player-bar{height:88px;display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border:1px solid rgba(255,255,255,0.03)}
+  .now{display:flex;align-items:center;gap:10px;min-width:0}
+  .now img{width:64px;height:64px;border-radius:8px;object-fit:cover}
+  .meta{min-width:0}
+  .meta .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta .a{font-size:12px;color:var(--muted)}
+  .controls{display:flex;align-items:center;gap:10px;margin-left:6px}
+  .btn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:transparent;border:1px solid rgba(255,255,255,0.03);color:var(--text);cursor:pointer}
+  .btn.primary{background:var(--accent);color:#002426;border:0;font-weight:700;box-shadow:0 6px 16px rgba(0,229,255,0.08)}
+  .seek{display:flex;align-items:center;gap:10px;flex:1}
+  .time{width:48px;text-align:center;font-size:13px;color:var(--muted)}
+  input[type="range"]{appearance:none;height:6px;background:rgba(255,255,255,0.07);border-radius:999px}
+  input[type="range"]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #002426;box-shadow:0 0 0 6px rgba(0,229,255,0.06)}
+  /* small lists */
+  .small-list{display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;gap:8px;align-items:center}
+  .queue-item{display:flex;gap:8px;align-items:center;padding:6px;border-radius:8px}
+  .queue-item:hover{background:rgba(255,255,255,0.02)}
+  .mini-cover{width:44px;height:44px;border-radius:6px;object-fit:cover}
+  .spacer{flex:1}
+  /* playlist controls */
+  .playlist-controls{display:flex;gap:8px;align-items:center}
+  input[type="text"].tiny{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text)}
+  .pill{background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+  /* mini player (mobile) */
+  .mini-player{display:none;position:fixed;left:12px;right:12px;bottom:12px;padding:8px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border:1px solid rgba(255,255,255,0.03);box-shadow:var(--shadow);align-items:center;gap:8px}
+  .mini-player img{width:44px;height:44px;border-radius:8px;object-fit:cover}
+  .mini-meta{flex:1;min-width:0}
+  .mini-meta .t{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini-meta .a{font-size:12px;color:var(--muted)}
+  /* responsive */
+  @media (max-width:1000px){.sidebar-right{display:none}}
+  @media (max-width:700px){.sidebar{display:none}.app{padding:8px}.card{padding:8px}.player-bar{display:none}.mini-player{display:flex}}
+</style>
+</head>
+<body>
+<div class="app" role="application" aria-label="NeonStream Music App">  <!-- LEFT SIDEBAR -->  <aside class="sidebar" aria-label="Sidebar">
+    <div class="brand">NEON • STREAM</div>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#" onclick="showView('browse');return false">Home</a>
+      <a href="#" onclick="showView('playlists');return false">Playlists</a>
+      <a href="#" onclick="showView('queue');return false">Queue</a>
+      <a href="#" onclick="showView('library');return false">Library</a>
+    </nav><div class="playlist-controls">
+  <input id="newPlaylistName" class="tiny" type="text" placeholder="New playlist name" />
+  <button class="btn" title="Create playlist" onclick="createPlaylist()">＋</button>
+</div>
+
+<div style="margin-top:8px;color:var(--muted);font-size:12px">Saved Playlists</div>
+<div id="savedPlaylists" class="library"></div>
+<div style="color:var(--muted);font-size:12px">Shortcuts: Space play/pause • ←/→ seek • N/P next/prev</div>
+
+  </aside>  <!-- MAIN -->  <main class="main">
+    <div class="topbar">
+      <div class="search" role="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27a6.48 6.48 0 10-.71.71l.27.28v.79L20 20.49 20.49 20l-4.99-6zM6.5 11a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0z"/></svg>
+        <input id="search" placeholder="Search title or artist..." />
+      </div>
+      <div class="pill" id="nowCount">Tracks: 0</div>
+    </div><div class="content">
+  <!-- center list / browse -->
+  <section class="list" id="view-browse" aria-labelledby="browse-title">
+    <h3 id="browse-title">Browse</h3>
+    <div id="grid" class="grid" aria-live="polite"></div>
+  </section>
+
+  <!-- playists, queue, library panels in right column -->
+  <aside class="sidebar-right">
+    <div class="list" id="view-playlists" style="display:none">
+      <h3>Playlist View</h3>
+      <div id="playlistContents"></div>
+    </div>
+
+    <div class="list" id="view-queue" style="display:none">
+      <h3>Up Next</h3>
+      <div id="queueList" class="small-list"></div>
+    </div>
+
+    <div class="list" id="view-library" style="display:none">
+      <h3>Your Library</h3>
+      <div id="libraryList"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Player -->
+<div class="player-bar" role="region" aria-label="Player">
+  <div class="now">
+    <img id="coverNow" src="" alt="Cover" />
+    <div class="meta">
+      <div id="nowTitle" class="t">—</div>
+      <div id="nowArtist" class="a">—</div>
+    </div>
+  </div>
+
+  <div class="controls" role="group" aria-label="Playback controls">
+    <button id="prevBtn" class="btn" title="Prev (P)">⟨⟨</button>
+    <button id="playBtn" class="btn primary" title="Play/Pause (Space)">▶</button>
+    <button id="nextBtn" class="btn" title="Next (N)">⟩⟩</button>
+
+    <button id="shuffleBtn" class="btn" title="Shuffle">🔀</button>
+    <button id="repeatBtn" class="btn" title="Repeat (off/one/all)">🔁</button>
+  </div>
+
+  <div class="seek" style="min-width:260px;max-width:720px;">
+    <div id="cur" class="time">0:00</div>
+    <input id="seekRange" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek" />
+    <div id="dur" class="time">0:00</div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
+    <input id="volRange" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
+  </div>
+</div>
+
+  </main>
+</div><!-- Mini player for small screens --><div class="mini-player" id="miniPlayer" aria-hidden="true">
+  <img id="miniCover" src="" alt="cover" />
+  <div class="mini-meta">
+    <div id="miniTitle" class="t">—</div>
+    <div id="miniArtist" class="a">—</div>
+  </div>
+  <button id="miniPrev" class="btn">⟨</button>
+  <button id="miniPlay" class="btn primary">▶</button>
+  <button id="miniNext" class="btn">⟩</button>
+</div><script>
+/* ============================
+   CONFIG: Add your tracks here
+   ============================ */
+const TRACKS = [
+  { id: "t1", title:"Oviman Lo-Fi Remix", artist:"Tanveer Evan", src:"Oviman Lofi Remix.mp3", cover:"Oviman-From-Best-friend-3--Bengali-2021-20210316123306-500x500.jpg", duration:0 },
+  { id: "t2", title:"Maine Royaan Lo-Fi Remix", artist:"Tanveer Evan", src:"Maine Royaan Lofi Remix.mp3", cover:"Maine-Royaan-Hindi-2021-20210716073628-500x500.jpg", duration:0 },
+  { id: "t3", title:"O Mon Re Lo-Fi Remix", artist:"Tanveer Evan", src:"O Mon Re-Lofi remix.mp3", cover:"O-Mon-Re-Bengali-2021-20210815155609-500x500.jpg", duration:0 }
+];
+/* ============================ */
+
+const $ = s => document.querySelector(s);
+const grid = $("#grid");
+const search = $("#search");
+const coverNow = $("#coverNow"), nowTitle = $("#nowTitle"), nowArtist = $("#nowArtist");
+const playBtn = $("#playBtn"), prevBtn = $("#prevBtn"), nextBtn = $("#nextBtn");
+const seekRange = $("#seekRange"), cur = $("#cur"), dur = $("#dur");
+const volRange = $("#volRange"), shuffleBtn = $("#shuffleBtn"), repeatBtn = $("#repeatBtn");
+const queueList = $("#queueList"), savedPlaylists = $("#savedPlaylists");
+const viewBrowse = $("#view-browse"), viewPlaylists = $("#view-playlists"), viewQueue = $("#view-queue"), viewLibrary = $("#view-library");
+const playlistContents = $("#playlistContents"), libraryList = $("#libraryList");
+const nowCount = $("#nowCount");
+const miniPlayer = $("#miniPlayer"), miniCover = $("#miniCover"), miniTitle = $("#miniTitle"), miniArtist = $("#miniArtist");
+const miniPlay = $("#miniPlay"), miniPrev = $("#miniPrev"), miniNext = $("#miniNext");
+
+let audio = new Audio();
+audio.preload = "metadata"; // we will rely on separate preloads for durations
+let tracks = TRACKS.slice(); // working list
+let index = 0;
+let queue = []; // list of indices into tracks
+let playing = false;
+let shuffle = false;
+let repeatMode = 0; // 0=off,1=one,2=all
+let animRAF = null;
+
+/* Persist */
+const STORAGE_KEY = "neonstream:v2";
+const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+if(state.index != null) index = state.index;
+if(state.volume != null){ audio.volume = volRange.value = state.volume; }
+if(state.shuffle != null) shuffle = state.shuffle;
+if(state.repeatMode != null) repeatMode = state.repeatMode;
+if(state.queue) queue = state.queue;
+if(state.time) { audio._savedTime = state.time; } // restored later when track loaded
+
+/* helpers */
+const timeFormat = s => {
+  if(!isFinite(s)) return "0:00";
+  s = Math.max(0,Math.floor(s));
+  let m = Math.floor(s/60), sec = s%60;
+  return `${m}:${sec<10? '0':''}${sec}`;
+};
+
+/* --- PRELOAD METADATA (durations) ---
+   We'll load only metadata (no playback) for each track asynchronously.
+   This avoids heavy network usage while providing durations in the UI.
+*/
+function preloadDurations(list){
+  list.forEach((t, i)=>{
+    if(t.duration && t.duration>0) return; // already known
+    try{
+      const a = new Audio();
+      a.preload = 'metadata';
+      a.src = t.src;
+      a.addEventListener('loadedmetadata', ()=>{
+        t.duration = isFinite(a.duration) ? Math.round(a.duration) : 0;
+        // update UI card if visible
+        const durEl = document.querySelector(`.card[data-i=\"${i}\"] .duration`);
+        if(durEl) durEl.textContent = t.duration ? timeFormat(t.duration) : '';
+        a.src = ''; // release
+      }, {once:true});
+      // small error handler
+      a.addEventListener('error', ()=>{ a.src = ''; }, {once:true});
+    }catch(e){ /* ignore */ }
+  });
+}
+
+/* RENDER GRID (with duration) */
+function renderGrid(list){
+  nowCount.textContent = `Tracks: ${list.length}`;
+  grid.innerHTML = list.map((t,i)=>`
+    <div class="card" data-i="${i}" tabindex="0" title="Play ${t.title}">
+      <div class="cover" style="background-image:url('${t.cover}')" aria-hidden="true"></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="min-width:0">
+          <div class="title">${escapeHtml(t.title)}</div>
+          <div class="artist">${escapeHtml(t.artist)}</div>
+        </div>
+        <div class="duration">${t.duration? timeFormat(t.duration): ''}</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn small" data-action="play" data-i="${i}" title="Play">▶</button>
+        <button class="btn small" data-action="add" data-i="${i}" title="Add to queue">＋</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+/* escape simple HTML to avoid injection in titles */
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* Initial render */
+renderGrid(tracks);
+preloadDurations(tracks);
+
+/* Grid interactions (play/add) */
+grid.addEventListener("click", e=>{
+  const card = e.target.closest(".card");
+  if(!card) return;
+  const actionBtn = e.target.closest("button[data-action]");
+  const i = Number(card.dataset.i);
+  if(actionBtn){
+    const act = actionBtn.dataset.action;
+    if(act === "play") playIndex(i, true);
+    if(act === "add") addToQueue(i);
+  } else {
+    playIndex(i, true);
+  }
+});
+
+/* Search (debounced) */
+let searchTimer = null;
+search.addEventListener("input", ()=>{
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=>{
+    const q = search.value.trim().toLowerCase();
+    const filtered = q ? tracks.filter(t=> (t.title + " " + t.artist).toLowerCase().includes(q)) : tracks;
+    renderGrid(filtered);
+    preloadDurations(filtered);
+  }, 120);
+});
+
+/* --- Playback controls --- */
+function loadTrack(i){
+  const t = tracks[i];
+  if(!t) return;
+  // set source and update UI
+  audio.src = t.src;
+  coverNow.src = t.cover;
+  nowTitle.textContent = t.title;
+  nowArtist.textContent = t.artist;
+  miniCover.src = t.cover; miniTitle.textContent = t.title; miniArtist.textContent = t.artist;
+  index = i;
+  highlightPlaying();
+}
+
+function playIndex(i, userTriggered=false){
+  if(i<0 || i>=tracks.length) return;
+  // if same track and paused, resume
+  if(i === index && !audio.paused && audio.src && audio.src.includes(tracks[i].src) ){
+    // already playing
+    return;
+  }
+  loadTrack(i);
+  // attempt to restore precise saved time if available
+  const st = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  if(st.index === i && st.time) {
+    audio.currentTime = st.time;
+  }
+  audio.play().catch(()=>{});
+}
+
+function togglePlay(){
+  if(audio.paused) audio.play(); else audio.pause();
+}
+
+playBtn.addEventListener("click", togglePlay);
+miniPlay.addEventListener("click", togglePlay);
+prevBtn.addEventListener("click", prevTrack);
+miniPrev.addEventListener("click", prevTrack);
+nextBtn.addEventListener("click", nextTrack);
+miniNext.addEventListener("click", nextTrack);
+
+audio.addEventListener("play", ()=>{ playing=true; playBtn.textContent="⏸"; miniPlay.textContent="⏸"; startRAF(); });
+audio.addEventListener("pause", ()=>{ playing=false; playBtn.textContent="▶"; miniPlay.textContent="▶"; stopRAF(); });
+audio.addEventListener("ended", onEnded);
+
+function prevTrack(){
+  if(audio.currentTime>3){ audio.currentTime=0; return; }
+  if(queue.length>0){ playFromQueuePrev(); return; }
+  if(shuffle){ playIndex(pickShuffled(), true); return; }
+  index = (index-1+tracks.length)%tracks.length; playIndex(index,true);
+}
+
+function nextTrack(){
+  if(queue.length>0){ playFromQueueNext(); return; }
+  if(repeatMode===1){ // repeat one
+    audio.currentTime=0; audio.play(); return; }
+  if(shuffle){ playIndex(pickShuffled(), true); return; }
+  // normal advance
+  const next = index+1;
+  if(next < tracks.length){ playIndex(next,true); }
+  else {
+    if(repeatMode===2){ playIndex(0,true); }
+    else { audio.pause(); }
+  }
+}
+
+function pickShuffled(){
+  if(tracks.length<=1) return 0;
+  let choice = Math.floor(Math.random()*tracks.length);
+  // avoid immediate repeat when possible
+  if(choice === index) choice = (choice+1)%tracks.length;
+  return choice;
+}
+
+/* Repeat & Shuffle */
+shuffleBtn.addEventListener("click", ()=>{
+  shuffle = !shuffle;
+  shuffleBtn.style.background = shuffle ? "rgba(0,229,255,0.08)" : "transparent";
+  persist();
+});
+repeatBtn.addEventListener("click", ()=>{
+  repeatMode = (repeatMode+1)%3;
+  repeatBtn.style.background = repeatMode ? "rgba(0,229,255,0.08)" : "transparent";
+  repeatBtn.title = repeatMode===0 ? "Repeat: off" : repeatMode===1 ? "Repeat: one" : "Repeat: all";
+  persist();
+});
+
+/* Seek & time with precise saving */
+let userSeeking = false;
+seekRange.addEventListener("input", ()=>{
+  if(isFinite(audio.duration)){
+    userSeeking = true;
+    audio.currentTime = (seekRange.value/1000) * audio.duration;
+  }
+});
+audio.addEventListener("timeupdate", ()=> {
+  if(isFinite(audio.duration)){
+    seekRange.value = String(Math.round((audio.currentTime/audio.duration)*1000));
+    cur.textContent = timeFormat(audio.currentTime);
+    dur.textContent = timeFormat(audio.duration);
+    if(!userSeeking){ /* nothing */ }
+  } else {
+    cur.textContent = "0:00"; dur.textContent = "0:00";
+  }
+});
+audio.addEventListener('seeked', ()=>{ userSeeking = false; persist(); });
+
+/* Volume */
+volRange.addEventListener("input", ()=> {
+  audio.volume = Number(volRange.value);
+  persist();
+});
+
+/* Queue management (improved) */
+function addToQueue(i){ queue.push(i); renderQueue(); persist(); }
+function playFromQueueNext(){
+  const nextIndex = queue.shift();
+  renderQueue();
+  playIndex(nextIndex, true);
+  persist();
+}
+function playFromQueuePrev(){
+  // if prev exists in history, you can implement history stack — simple fallback:
+  playIndex(Math.max(0,index-1), true);
+}
+function renderQueue(){
+  queueList.innerHTML = queue.map((i, idx)=>`
+    <div class="queue-item" data-qi="${idx}">
+      <img class="mini-cover" src="${tracks[i].cover}" alt="" />
+      <div style="min-width:0">
+        <div style="font-weight:600;font-size:13px">${escapeHtml(tracks[i].title)}</div>
+        <div style="font-size:12px;color:var(--muted)">${escapeHtml(tracks[i].artist)}</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn" data-action="remove" data-qi="${idx}">✕</button>
+    </div>
+  `).join("");
+}
+/* queue actions */
+queueList.addEventListener("click", e=>{
+  const btn = e.target.closest("button[data-action]");
+  if(!btn) return;
+  const act = btn.dataset.action;
+  const qidx = Number(btn.dataset.qi);
+  if(act==="remove"){ queue.splice(qidx,1); renderQueue(); persist(); }
+});
+
+/* highlight playing card */
+function highlightPlaying(){
+  document.querySelectorAll(".card").forEach(c=> c.style.outline = "");
+  const c = document.querySelector(`.card[data-i=\"${index}\"]`);
+  if(c) c.style.outline = `2px solid ${getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#00e5ff'}`;
+}
+
+/* playlists (localStorage) */
+function getSavedPlaylists(){ return JSON.parse(localStorage.getItem("neon:playlists")||"{}"); }
+function savePlaylists(obj){ localStorage.setItem("neon:playlists", JSON.stringify(obj)); renderSavedPlaylists(); }
+function createPlaylist(){
+  const name = $("#newPlaylistName").value.trim();
+  if(!name) return alert("Enter a playlist name");
+  const saved = getSavedPlaylists();
+  if(saved[name]) return alert("Playlist exists");
+  saved[name] = [];
+  savePlaylists(saved);
+  $("#newPlaylistName").value = "";
+}
+function renderSavedPlaylists(){
+  const saved = getSavedPlaylists();
+  savedPlaylists.innerHTML = Object.keys(saved).length ? Object.keys(saved).map(n=>`<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><div style="flex:1">${escapeHtml(n)}</div><button class="btn" data-action="load" data-name="${escapeHtml(n)}">Load</button><button class="btn" data-action="del" data-name="${escapeHtml(n)}">✕</button></div>`).join("") : `<div style="color:var(--muted)">No saved playlists</div>`;
+}
+savedPlaylists.addEventListener("click", e=>{
+  const btn = e.target.closest("button[data-action]");
+  if(!btn) return;
+  const act = btn.dataset.action, name = btn.dataset.name;
+  const saved = getSavedPlaylists();
+  if(act==="load"){ queue = (saved[name]||[]).slice(); renderQueue(); }
+  if(act==="del"){ delete saved[name]; savePlaylists(saved); }
+});
+
+/* library view just shows tracks */
+function renderLibrary(){
+  libraryList.innerHTML = tracks.map((t,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px"><img class="mini-cover" src="${t.cover}" alt /><div style="min-width:0"><div style="font-weight:600">${escapeHtml(t.title)}</div><div style="font-size:12px;color:var(--muted)">${escapeHtml(t.artist)}</div></div><div class="spacer"></div><button class="btn" data-i="${i}" data-action="addlib">＋</button></div>`).join("");
+}
+libraryList.addEventListener("click", e=>{
+  const btn = e.target.closest("button[data-action]");
+  if(!btn) return;
+  const i = Number(btn.dataset.i);
+  if(btn.dataset.action==="addlib"){ addToQueue(i); }
+});
+
+/* View switcher */
+function showView(key){
+  viewBrowse.style.display = key==="browse" ? "" : "none";
+  viewPlaylists.style.display = key==="playlists" ? "" : "none";
+  viewQueue.style.display = key==="queue" ? "" : "none";
+  viewLibrary.style.display = key==="library" ? "" : "none";
+}
+showView("browse");
+
+/* persisted state */
+function persist(){
+  const data = { index, volume: audio.volume, shuffle, repeatMode, queue, time: audio.currentTime };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  savePlaylists(getSavedPlaylists()); // keep playlists persisted as well
+}
+
+/* end-of-track logic (clean, robust) */
+function onEnded(){
+  if(repeatMode===1){ audio.currentTime=0; audio.play(); return; }
+  if(queue.length>0){ playFromQueueNext(); return; }
+  if(shuffle){ playIndex(pickShuffled(), true); return; }
+  if(repeatMode===2){ // repeat all
+    const next = (index+1) % tracks.length;
+    playIndex(next,true); return;
+  }
+  // otherwise stop if at end
+  const nextIndex = index+1;
+  if(nextIndex < tracks.length){ playIndex(nextIndex, true); } else { audio.pause(); }
+}
+
+/* keyboard */
+window.addEventListener("keydown", e=>{
+  const tag = (e.target.tagName||"").toLowerCase();
+  if(tag==="input" || tag==="textarea") return;
+  if(e.code==="Space"){ e.preventDefault(); togglePlay(); }
+  if(e.key==="ArrowRight"){ audio.currentTime += 5; }
+  if(e.key==="ArrowLeft"){ audio.currentTime -= 5; }
+  if(e.key==="ArrowUp"){ audio.volume = Math.min(1, audio.volume + 0.05); volRange.value = audio.volume; persist(); }
+  if(e.key==="ArrowDown"){ audio.volume = Math.max(0, audio.volume - 0.05); volRange.value = audio.volume; persist(); }
+  if(e.key.toLowerCase()==="n"){ nextTrack(); }
+  if(e.key.toLowerCase()==="p"){ prevTrack(); }
+});
+
+/* persist & restore UI initial state */
+function init(){
+  renderSavedPlaylists();
+  renderLibrary();
+  renderQueue();
+  // restore last index & position if available
+  const st = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  if(st.index != null) index = st.index;
+  if(st.time) audio.currentTime = st.time; // will be applied after load
+  loadTrack(index);
+  // update shuffle/repeat UI
+  shuffleBtn.style.background = shuffle ? "rgba(0,229,255,0.08)" : "transparent";
+  repeatBtn.style.background = repeatMode ? "rgba(0,229,255,0.08)" : "transparent";
+  repeatBtn.title = repeatMode===0 ? "Repeat: off" : repeatMode===1 ? "Repeat: one" : "Repeat: all";
+}
+init();
+
+/* highlight on load */
+function highlightCard(){
+  document.querySelectorAll(".card").forEach(c=> c.style.outline = "");
+  const c = document.querySelector(`.card[data-i=\"${index}\"]`);
+  if(c) c.style.outline = `2px solid ${getComputedStyle(document.documentElement).getPropertyValue('--accent')||'#00e5ff'}`;
+}
+function highlightPlaying(){ highlightCard(); }
+
+/* rAF for light tasks (not heavy) */
+function startRAF(){
+  if(animRAF) cancelAnimationFrame(animRAF);
+  function loop(){ /* could animate visualizers here later */ animRAF = requestAnimationFrame(loop); }
+  animRAF = requestAnimationFrame(loop);
+}
+function stopRAF(){ if(animRAF) cancelAnimationFrame(animRAF); animRAF = null; }
+
+/* Save playback time periodically */
+setInterval(()=> {
+  // only persist if audio has meaningful data
+  if(audio.src && !isNaN(audio.duration)) persist();
+}, 2000);
+
+/* unload handler */
+window.addEventListener('beforeunload', ()=>{ persist(); });
+
+/* click handlers for queue / playlists sections toggles */
+document.addEventListener("click", e=>{
+  const btn = e.target.closest("button[data-i]");
+  if(btn && btn.dataset.action==="addlib"){ addToQueue(Number(btn.dataset.i)); }
+});
+
+/* expose some functions for debug */
+window.NEON = { tracks, playIndex, addToQueue, getSavedPlaylists };
+</script></body>
+</html>
